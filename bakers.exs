@@ -1,15 +1,15 @@
-#Bailey && Dalton
-
-
-#defmodule Test do
-#	def tessst(n), do: IO.puts "#{n} alsdkf"	
-#end
+# Bailey && Dalton
 
 defmodule Customer do
-	def make-customers(n) do
-		spawn(&Customer.customer/0)
-		#send  
-		make-cusomters(n-1)
+  def print_customer(n) do
+		IO.puts "Customer #{n} arrived at store."
+	end
+
+	def make_customers(0), do: "Finished creating customers."
+	def make_customers(n) when n > 0 do
+		spawn(__MODULE__, :print_customer, [n])
+		#send
+		make_customers(n-1)
 		#receive do
 			#{:sleep } -> this-customer.sleep(:random.uniform()
 			#{:line
@@ -19,12 +19,7 @@ defmodule Customer do
 		#end
 	end
 
-	def customer do
-		IO.puts "hello"
-	end
-end
-
-
-defmodule Servers do
-
+	#def customer(n) do
+	#	IO.puts "n #{n}}
+	#end
 end
