@@ -3,6 +3,7 @@
 defmodule Customer do
   def print_customer(n) do
 		IO.puts "Customer #{n} arrived at store."
+	#	:timer.sleep(1000)
 	end
 
 	def make_customers(0), do: "Finished creating customers."
@@ -22,4 +23,12 @@ defmodule Customer do
 	#def customer(n) do
 	#	IO.puts "n #{n}}
 	#end
+end
+
+defmodule Server do
+
+end
+
+defmodule Manager do
+
 end
