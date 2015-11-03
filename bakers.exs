@@ -1,18 +1,19 @@
 # Bailey && Dalton && Dillon
 
 defmodule Main do
-  def start(n) do
-    mpid = spawn(&Manager.loop/0)
+  def start(n, m) do
+    list = []
+    mpid = spawn(Manager, :loop, [list])
     cpid = spawn(&Customer.loop/0)
-    spid = spawm(&Server.loop/0)
+    spid = spawn(&Server.loop/0)
     Process.register(mpid, :mpid)
     mpid
     Process.register(cpid, :cpid)
     cpid
     Process.register(spid, :spid)
     spid
-    Customer.make_customers(n)
-    #Server.make_servers()
+    Server.make_servers(n)
+    Customer.make_customers(m)
   end
 end
 
@@ -22,7 +23,7 @@ defmodule Customer do
     :timer.sleep(Randomize.random(10000))
     fib = Randomize.random(40)
     send(:mpid, {:help, n, self(), fib})
-	end
+  end
 
   def make_customers(0), do: "Customers created"
 	def make_customers(n) when n > 0 do 
@@ -33,36 +34,63 @@ defmodule Customer do
 
   def loop do
     receive do
-      {:loop, n, fib} ->
-        IO.puts "Yay! Customer #{n}"
+      {:recieve, n, fib} ->
+        IO.puts "Customer #{n} recieved their fib, #{fib}!"
     end
     loop
   end
 end
 
 defmodule Server do
-  def send_server(n, pid) do
-    IO.puts "Server #{n} is getting ready"
-    send(pid, {:ready, n, self()})
+  def ready_server(pid) do
+    send(:mpid, {:ready, pid})
+  end
+  def ready_servers() do
+    IO.puts "A server is ready"
+    send(:mpid, {:ready, self()})
   end
 
-	def make_servers(0, _), do: "Servers created"
-  def make_servers(n, pid) when n > 0 do
-    spawn(__MODULE__, :send_server, [n, pid])
+	def make_servers(0), do: "Servers created"
+  def make_servers(n) when n > 0 do
+    spawn(__MODULE__, :ready_servers, [])
 
-    make_servers(n-1, pid)
+    make_servers(n-1)
+  end
+
+  def loop do
+    receive do
+      {:calculate, n, fib, server} ->
+        x = Fib.fib(fib)
+        send(:cpid, {:recieve, n, x})
+        ready_server(server)
+    end
+    loop
   end
 end
 
 defmodule Manager do
-	def loop do
+	def loop(list) do
 		receive	do
 			{:help, n, pid, fib} ->
-		    send(:cpid, {:loop, n, fib})
-      {:ready, sender_num, pid} ->
-        IO.inspect pid
+        first = List.first(list)
+        IO.puts "Checking for server..."
+        if first != nil do
+          IO.puts "Serving customer #{n}"
+          send(:spid, {:calculate, n, fib, first})
+          list = List.delete_at(list, 0)
+        else
+          IO.puts "No server, waiting..."
+          send(:mpid, {:wait, n, pid, fib})
+        end
+      {:ready, pid} ->
+        list = list ++ [pid]
+        IO.inspect list
+      {:wait, n, pid, fib} ->
+        :timer.sleep(500)
+        "Done waiting..."
+        send(:mpid, {:help, n, pid, fib})
 		end
-    loop
+    loop(list)
 	end
 end
 
@@ -70,7 +98,7 @@ defmodule Randomize do
   def random(number) do
     :random.seed(:erlang.now())
     :random.uniform(number)
-   end
+  end
 end
 
 defmodule Fib do
