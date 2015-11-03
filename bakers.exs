@@ -1,33 +1,42 @@
 # Bailey && Dalton && Dillon
 
 defmodule Main do
-  def start(cst) do
-    pid = spawn(&Manager.handle_things/0)
-    Customer.make_customers(cst, pid)
-    #Server.make_servers(svr, pid)
+  def start(n) do
+    mpid = spawn(&Manager.loop/0)
+    cpid = spawn(&Customer.loop/0)
+    spid = spawm(&Server.loop/0)
+    Process.register(mpid, :mpid)
+    mpid
+    Process.register(cpid, :cpid)
+    cpid
+    Process.register(spid, :spid)
+    spid
+    Customer.make_customers(n)
+    #Server.make_servers()
   end
 end
 
 defmodule Customer do
-  def sleep_customer(n, pid) do
+  def sleep_customer(n) do
     IO.puts "Customer #{n} arrived at store."
     :timer.sleep(Randomize.random(10000))
     fib = Randomize.random(40)
-    send(pid, {:help, n, self(), fib})
+    send(:mpid, {:help, n, self(), fib})
 	end
 
-  def make_customers(0, _), do: "Customers created"
-	def make_customers(n, pid) when n > 0 do 
-    spawn(__MODULE__, :sleep_customer, [n, pid])
+  def make_customers(0), do: "Customers created"
+	def make_customers(n) when n > 0 do 
+    spawn(__MODULE__, :sleep_customer, [n])
 
-		make_customers(n-1, pid)
+		make_customers(n-1)
 	end
 
   def loop do
     receive do
-      {:loop, sender_num} ->
-        IO.puts "Yay! Customer #{sender_num}"
+      {:loop, n, fib} ->
+        IO.puts "Yay! Customer #{n}"
     end
+    loop
   end
 end
 
@@ -46,14 +55,14 @@ defmodule Server do
 end
 
 defmodule Manager do
-	def handle_things do
+	def loop do
 		receive	do
-			{:help, sender_num, pid, fib} ->
-		    send(pid, {:loop, sender_num})
+			{:help, n, pid, fib} ->
+		    send(:cpid, {:loop, n, fib})
       {:ready, sender_num, pid} ->
         IO.inspect pid
 		end
-    handle_things
+    loop
 	end
 end
 
