@@ -8,8 +8,6 @@ defmodule Main do
     mpid
     Server.distribute_servers(n)
     #Server.make_servers(n)
-    #target_node = List.first(Node.list)
-    #npid = Node.spawn(target_node, Server, :make_servers, [n])
     Customer.make_customers(m)
   end
 end
@@ -46,7 +44,6 @@ defmodule Server do
   def make_servers(n, target) when n > 0 do
     #target = List.first(Node.list)
     pid = Node.spawn(target, __MODULE__, :loop, [])
-    #IO.inspect pid
     #pid = spawn(__MODULE__, :loop, [])
     send(:global.whereis_name(:mpid), {:ready, pid})
     IO.puts "Server created"
@@ -54,11 +51,10 @@ defmodule Server do
   end
 
   def loop do
-    #IO.puts "Server is on #{Node.self}!"
     receive do
       {:calculate, pid, fib} ->
         x = Fib.fib(fib)
-        IO.inspect Node.self
+        IO.inspect "Process on: #{Node.self}!"
         send(pid, {:receive, x})
         send(:global.whereis_name(:mpid), {:ready, self()})
     end
