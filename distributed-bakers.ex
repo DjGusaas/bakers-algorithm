@@ -6,8 +6,8 @@ defmodule Main do
     mpid = spawn(Manager, :loop, [list])
     :global.register_name(:mpid, mpid)
     mpid
-    #distribute_servers(Node.list, n)
-    Server.make_servers(n)
+    Server.distribute_servers(n)
+    #Server.make_servers(n)
     #target_node = List.first(Node.list)
     #npid = Node.spawn(target_node, Server, :make_servers, [n])
     Customer.make_customers(m)
@@ -42,15 +42,15 @@ defmodule Customer do
 end
 
 defmodule Server do
-	def make_servers(0), do: "All servers created"
-  def make_servers(n) when n > 0 do
-    target = List.first(Node.list)
+	def make_servers(0, _), do: "All servers created"
+  def make_servers(n, target) when n > 0 do
+    #target = List.first(Node.list)
     pid = Node.spawn(target, __MODULE__, :loop, [])
     #IO.inspect pid
     #pid = spawn(__MODULE__, :loop, [])
     send(:global.whereis_name(:mpid), {:ready, pid})
     IO.puts "Server created"
-    make_servers(n-1)
+    make_servers(n-1, target)
   end
 
   def loop do
@@ -65,9 +65,14 @@ defmodule Server do
     loop
   end
 
-  def distribute_servers(n, nodes) do
-    #size = nodes/list_size + 1
-    #make_servers(n, self)
+  # distributes servers across connected Nodes
+  # assumes that the number of servers is
+  # divisible by the number of Nodes
+  def distribute_servers(n) do
+    list = Node.list
+    list = list ++ [Node.self]
+    x = div(n, Enum.count(list))
+    Enum.map 0..Enum.count(list)-1, &(make_servers(x, Enum.at(list, &1)))
   end
 end
 
