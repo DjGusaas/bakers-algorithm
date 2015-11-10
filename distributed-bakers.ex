@@ -1,12 +1,15 @@
-# Bailey && Dalton && Dillon
+# Dalton && Otto
 
 defmodule Main do
   def start(n, m) do
     list = []
     mpid = spawn(Manager, :loop, [list])
-    Process.register(mpid, :mpid)
+    :global.register_name(:mpid, mpid)
     mpid
+    #distribute_servers(Node.list, n)
     Server.make_servers(n)
+    #target_node = List.first(Node.list)
+    #npid = Node.spawn(target_node, Server, :make_servers, [n])
     Customer.make_customers(m)
   end
 end
@@ -30,7 +33,7 @@ defmodule Customer do
         :timer.sleep(Randomize.random(10000))
         IO.puts "A customer woke up!"
         fib = Randomize.random(40)
-        send(:mpid, {:help, pid, fib})
+        send(:global.whereis_name(:mpid), {:help, pid, fib})
       {:receive, fib} ->
         IO.puts "A customer recieved fib, #{fib}!"
     end
@@ -41,20 +44,30 @@ end
 defmodule Server do
 	def make_servers(0), do: "All servers created"
   def make_servers(n) when n > 0 do
-    pid = spawn(__MODULE__, :loop, [])
-    send(:mpid, {:ready, pid})
+    target = List.first(Node.list)
+    pid = Node.spawn(target, __MODULE__, :loop, [])
+    #IO.inspect pid
+    #pid = spawn(__MODULE__, :loop, [])
+    send(:global.whereis_name(:mpid), {:ready, pid})
     IO.puts "Server created"
     make_servers(n-1)
   end
 
   def loop do
+    #IO.puts "Server is on #{Node.self}!"
     receive do
       {:calculate, pid, fib} ->
         x = Fib.fib(fib)
+        IO.inspect Node.self
         send(pid, {:receive, x})
-        send(:mpid, {:ready, self()})
+        send(:global.whereis_name(:mpid), {:ready, self()})
     end
     loop
+  end
+
+  def distribute_servers(n, nodes) do
+    #size = nodes/list_size + 1
+    #make_servers(n, self)
   end
 end
 
@@ -70,14 +83,13 @@ defmodule Manager do
           servers = List.delete_at(servers, 0)
         else
           #IO.puts "No server, waiting..."
-          send(:mpid, {:wait, pid, fib})
+          send(:global.whereis_name(:mpid), {:wait, pid, fib})
         end
       {:ready, pid} ->
         servers = servers ++ [pid]
       {:wait, pid, fib} ->
         #:timer.sleep(500)
-        #"Done waiting..."
-        send(:mpid, {:help, pid, fib})
+        send(:global.whereis_name(:mpid), {:help, pid, fib})
 		end
     loop(servers)
 	end
