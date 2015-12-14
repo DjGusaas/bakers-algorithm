@@ -1,5 +1,5 @@
 // by Thomas Harren && Josh Chapman && Dalton Gusaas
-// taken from https://github.com/chapm250/BakersGo.git
+// original repo: https://github.com/chapm250/BakersGo.git
 package main
 
 import (
